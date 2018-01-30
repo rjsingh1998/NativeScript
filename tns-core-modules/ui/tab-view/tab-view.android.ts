@@ -5,7 +5,7 @@ import {
     TabViewBase, TabViewItemBase, itemsProperty, selectedIndexProperty,
     tabTextColorProperty, tabBackgroundColorProperty, selectedTabTextColorProperty,
     androidSelectedTabHighlightColorProperty, androidOffscreenTabLimitProperty,
-    fontSizeProperty, fontInternalProperty, View, layout,
+    androidTabsPositionProperty, fontSizeProperty, fontInternalProperty, View, layout,
     traceCategory, traceEnabled, traceWrite, Color
 } from "./tab-view-common"
 import { textTransformProperty, TextTransform, getTransformedText } from "../text-base";
@@ -169,7 +169,7 @@ function initializeNativeClasses() {
 
                 this.mCurrentPrimaryItem = fragment;
                 this.owner.selectedIndex = position;
-        
+
                 const tab = this.owner;
                 const items = tab.items;
                 const newItem = items ? items[position] : null;
@@ -326,7 +326,7 @@ export const tabs = new Array<WeakRef<TabView>>();
 
 export class TabView extends TabViewBase {
     private _tabLayout: org.nativescript.widgets.TabLayout;
-    private _viewPager: android.support.v4.view.ViewPager;
+    private _viewPager: org.nativescript.widgets.TabViewPager;
     private _pagerAdapter: android.support.v4.view.PagerAdapter;
     private _androidViewId: number = -1;
 
@@ -355,35 +355,48 @@ export class TabView extends TabViewBase {
 
         const context: android.content.Context = this._context;
         const nativeView = new org.nativescript.widgets.GridLayout(context);
-        nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.auto));
-        nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.star));
-
+        const viewPager = new org.nativescript.widgets.TabViewPager(context);
         const tabLayout = new org.nativescript.widgets.TabLayout(context);
-        nativeView.addView(tabLayout);
-        (<any>nativeView).tabLayout = tabLayout;
-
-        setElevation(nativeView, tabLayout);
-
-        const accentColor = getDefaultAccentColor(context);
-        if (accentColor) {
-            tabLayout.setSelectedIndicatorColors([accentColor]);
-        }
-
-        const primaryColor = ad.resources.getPaletteColor(PRIMARY_COLOR, context);
-        if (primaryColor) {
-            tabLayout.setBackgroundColor(primaryColor);
-        }
-
-        const viewPager = new android.support.v4.view.ViewPager(context);
         const lp = new org.nativescript.widgets.CommonLayoutParams();
+        const primaryColor = ad.resources.getPaletteColor(PRIMARY_COLOR, context);
+        let accentColor = getDefaultAccentColor(context);
+
         lp.row = 1;
-        viewPager.setLayoutParams(lp);
+
+        if (this.androidTabsPosition === "top") {
+            nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.auto));
+            nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.star));
+
+            viewPager.setLayoutParams(lp);
+        } else {
+            nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.star));
+            nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.auto));
+
+            tabLayout.setLayoutParams(lp);
+            viewPager.setSwipePageEnabled(false);
+            // set completely transparent accent color for tab selected indicator.
+            accentColor = 0x00FFFFFF;
+        }
+
         nativeView.addView(viewPager);
         (<any>nativeView).viewPager = viewPager;
 
         const adapter = new PagerAdapter(this);
         viewPager.setAdapter(adapter);
         (<any>viewPager).adapter = adapter;
+
+        nativeView.addView(tabLayout);
+        (<any>nativeView).tabLayout = tabLayout;
+
+        setElevation(nativeView, tabLayout);
+
+        if (accentColor) {
+            tabLayout.setSelectedIndicatorColors([accentColor]);
+        }
+
+        if (primaryColor) {
+            tabLayout.setBackgroundColor(primaryColor);
+        }
 
         return nativeView;
     }
