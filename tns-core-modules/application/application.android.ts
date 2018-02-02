@@ -15,6 +15,8 @@ export * from "./application-common";
 
 import { NavigationEntry } from "../ui/frame";
 
+import { createViewFromEntry } from "../ui/builder";
+
 const ActivityCreated = "activityCreated";
 const ActivityDestroyed = "activityDestroyed";
 const ActivityStarted = "activityStarted";
@@ -146,6 +148,29 @@ export function shouldCreateRootFrame(): boolean {
 export function run(entry?: NavigationEntry | string) {
     createRootFrame = false;
     start(entry);
+}
+
+const CALLBACKS = "_callbacks";
+
+export function _setRootView(entry?: NavigationEntry | string) {
+    const activity = androidApp.foregroundActivity;
+    if (!activity) {
+        throw new Error("Cannot find android activity.");
+    }
+
+    mainEntry = typeof entry === "string" ? { moduleName: entry } : entry;
+    const callbacks = activity[CALLBACKS];
+
+    // Delete previously cached root view in order to recreate it.
+    callbacks._rootView = (<any>androidApp).rootView = null;
+
+    const rootView = createViewFromEntry(mainEntry);
+    callbacks._rootView = (<any>androidApp).rootView = rootView;
+
+    rootView._setupAsRootView(activity);
+    activity.setContentView(rootView.nativeViewProtected, new org.nativescript.widgets.CommonLayoutParams());
+
+    callbacks._rootView.callLoaded();
 }
 
 export function getMainEntry() {
